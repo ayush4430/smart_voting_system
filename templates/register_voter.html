@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+
+{% block title %}Register New Voter{% endblock %}
+
+{% block content %}
+    <h2>Register New Voter</h2>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <ul class="flashes">
+                {% for category, message in messages %}
+                    <li class="{{ category }}">{{ message }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+    {% endwith %}
+
+    <form method="POST">
+        <label for="voter_id">Voter ID (Unique):</label>
+        <input type="text" id="voter_id" name="voter_id" required><br>
+
+        <label for="name">Voter Name:</label>
+        <input type="text" id="name" name="name" required><br>
+
+        <label for="email">Email (Optional):</label>
+        <input type="text" id="email" name="email"><br>
+
+        <label for="phone">Phone (Optional):</label>
+        <input type="text" id="phone" name="phone"><br>
+
+        <input type="submit" value="Register Voter">
+    </form>
+{% endblock %}

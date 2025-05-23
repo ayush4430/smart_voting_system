@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+
+{% block title %}All Registered Voters{% endblock %}
+
+{% block content %}
+    <h2>All Registered Voters</h2>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <ul class="flashes">
+                {% for category, message in messages %}
+                    <li class="{{ category }}">{{ message }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+    {% endwith %}
+
+    {% if voters %}
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Voter ID</th>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th>Has Voted</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for voter in voters %}
+                    <tr>
+                        <td>{{ voter.id }}</td>
+                        <td>{{ voter.voter_id }}</td>
+                        <td>{{ voter.name }}</td>
+                        <td>{{ voter.email if voter.email else 'N/A' }}</td>
+                        <td>{{ voter.phone if voter.phone else 'N/A' }}</td>
+                        <td>{{ 'Yes' if voter.has_voted else 'No' }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>No voters registered yet. <a href="{{ url_for('register_voter') }}">Register a new voter</a>.</p>
+    {% endif %}
+{% endblock %}
