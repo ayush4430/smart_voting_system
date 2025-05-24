@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+
+{% block title %}Cast Your Vote{% endblock %}
+
+{% block content %}
+    <h2>Cast Your Vote</h2>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <ul class="flashes">
+                {% for category, message in messages %}
+                    <li class="{{ category }}">{{ message }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+    {% endwith %}
+
+    <form method="POST">
+        <label for="voter_id_input">Your Voter ID:</label>
+        <input type="text" id="voter_id_input" name="voter_id_input" required placeholder="Enter your registered Voter ID"><br>
+
+        <label for="election_id">Select Election:</label>
+        <select id="election_id" name="election_id" required>
+            {% if elections %}
+                {% for election in elections %}
+                    <option value="{{ election.id }}">{{ election.name }} ({{ election.type }})</option>
+                {% endfor %}
+            {% else %}
+                <option value="">No active elections available.</option>
+            {% endif %}
+        </select><br>
+
+        <p>Please select your candidate:</p>
+        {# Candidates will be dynamically loaded/filtered in a more advanced version,
+           but for now, we'll list them all or based on initial selection. #}
+        {% if candidates %}
+            {% for candidate in candidates %}
+                <input type="radio" id="candidate_{{ candidate.id }}" name="candidate_id" value="{{ candidate.id }}" required>
+                <label for="candidate_{{ candidate.id }}">{{ candidate.name }} ({{ candidate.party if candidate.party else 'Independent' }}) for {{ candidate.election_name }}</label><br>
+            {% endfor %}
+        {% else %}
+            <p>No candidates available for selection.</p>
+        {% endif %}
+
+        <input type="submit" value="Cast Vote">
+    </form>
+{% endblock %}
