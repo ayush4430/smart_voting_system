@@ -222,8 +222,178 @@ def list_voters():
     conn.close() # Close connection
     # Render the 'list_voters.html' template and pass the fetched 'voters' data.
     return render_template('list_voters.html', voters=voters)
+@app.route('/add_candidate', methods=('GET', 'POST'))
+def add_candidate():
+    conn = get_db_connection()
+    elections = conn.execute('SELECT id, name, type FROM elections').fetchall() # Fetch elections for dropdown
+    if request.method == 'POST':
+        election_id = request.form['election_id']
+        name = request.form['name']
+        party = request.form['party']
 
+        if not election_id or not name:
+            flash('Election and Candidate Name are required!', 'error')
+        else:
+            try:
+                conn.execute('INSERT INTO candidates (election_id, name, party) VALUES (?, ?, ?)',
+                            (election_id, name, party))
+                conn.commit()
+                flash(f'Candidate "{name}" added successfully to Election ID {election_id}!', 'success')
+                return redirect(url_for('list_candidates'))
+            except sqlite3.IntegrityError:
+                flash(f'Error: Could not add candidate. Ensure data is valid.', 'error') # More specific error handling can be added later
+            finally:
+                conn.close() # Close connection if error occurs before redirect
 
+    conn.close() # Close connection after fetching elections for GET request
+    return render_template('add_candidate.html', elections=elections) # Pass elections to template
+@app.route('/candidates')
+def list_candidates():
+    conn = get_db_connection()
+    # DAA - Data Retrieval (JOIN Operation):
+    # We use a JOIN to fetch candidate details along with the name of the election
+    # they belong to, making the display more user-friendly.
+    candidates = conn.execute('''
+        SELECT
+            c.id,
+            c.name,
+            c.party,
+            c.vote_count,
+            e.name AS election_name -- Alias election name for clarity
+        FROM candidates c
+        JOIN elections e ON c.election_id = e.id
+        ORDER BY e.name, c.name
+    ''').fetchall()
+    conn.close()
+    return render_template('list_candidates.html', candidates=candidates)
+@app.route('/cast_vote', methods=('GET', 'POST'))
+def cast_vote():
+    conn = get_db_connection()
+    elections = conn.execute('SELECT id, name, type FROM elections').fetchall()
+    # Fetch all candidates with their election names for the initial form display
+    candidates = conn.execute('''
+        SELECT
+            c.id, c.name, c.party, e.name AS election_name
+        FROM candidates c JOIN elections e ON c.election_id = e.id
+        ORDER BY e.name, c.name
+    ''').fetchall()
+
+    if request.method == 'POST':
+        voter_id_input = request.form['voter_id_input']
+        election_id = request.form['election_id']
+        candidate_id = request.form['candidate_id'] # This is the ID of the chosen candidate
+
+        # DAA - Voter Validation & Double Voting Check:
+        # 1. Check if voter exists
+        voter = conn.execute('SELECT id, has_voted FROM voters WHERE voter_id = ?', (voter_id_input,)).fetchone()
+
+        if not voter:
+            flash('Invalid Voter ID. Please register first.', 'error')
+        else:
+            # 2. Check if this voter has already voted in THIS election (Conceptual: we'd need a more complex 'votes' table query)
+            # For simplicity now, we'll check if the voter has *any* vote recorded.
+            # A more robust system would check if voter_id and election_id combination exists in the 'votes' table.
+            vote_exists = conn.execute('SELECT id FROM votes WHERE voter_id = ? AND election_id = ?',
+                                       (voter['id'], election_id)).fetchone()
+
+            if vote_exists:
+                flash('You have already voted in this election!', 'error')
+            else:
+                try:
+                    # 3. Record the vote in the 'votes' table
+                    conn.execute('INSERT INTO votes (election_id, voter_id, candidate_id) VALUES (?, ?, ?)',
+                                (election_id, voter['id'], candidate_id))
+
+                    # 4. Increment the candidate's vote count
+                    conn.execute('UPDATE candidates SET vote_count = vote_count + 1 WHERE id = ?', (candidate_id,))
+
+                    # 5. Mark the voter as having voted (conceptually for this election, or globally for simplicity)
+                    # For now, let's mark the 'has_voted' column in the voters table for simplicity.
+                    # In a real system, you'd track votes per election for a voter.
+                    conn.execute('UPDATE voters SET has_voted = 1 WHERE id = ?', (voter['id'],))
+
+                    conn.commit()
+                    flash('Your vote has been cast successfully!', 'success')
+                    return redirect(url_for('home')) # Redirect to home or a results page
+                except Exception as e:
+                    conn.rollback() # Rollback changes if any error occurs during the transaction
+                    flash(f'An error occurred while casting your vote: {e}', 'error')
+                finally:
+                    conn.close() # Close connection if error occurs before redirect
+
+    conn.close() # Close connection after fetching data for GET request
+    return render_template('cast_vote.html', elections=elections, candidates=candidates)
+
+@app.route('/dashboard')
+def dashboard():
+    conn = get_db_connection()
+
+    # DAA - Data Aggregation and Access for Dashboard Summary
+    total_elections = conn.execute('SELECT COUNT(*) FROM elections').fetchone()[0]
+    total_voters = conn.execute('SELECT COUNT(*) FROM voters').fetchone()[0]
+    total_candidates = conn.execute('SELECT COUNT(*) FROM candidates').fetchone()[0]
+    total_votes_cast = conn.execute('SELECT COUNT(*) FROM votes').fetchone()[0] # Count individual votes
+
+    # DAA - Data Access and Transformation for Candidates with Votes
+    # This is similar to list_candidates but explicitly for dashboard context
+    candidates_with_votes = conn.execute('''
+        SELECT
+            c.name,
+            c.party,
+            c.vote_count,
+            e.name AS election_name
+        FROM candidates c
+        JOIN elections e ON c.election_id = e.id
+        ORDER BY e.name, c.vote_count DESC
+    ''').fetchall()
+
+    conn.close()
+
+    return render_template(
+        'dashboard.html',
+        total_elections=total_elections,
+        total_voters=total_voters,
+        total_candidates=total_candidates,
+        total_votes_cast=total_votes_cast,
+        candidates_with_votes=candidates_with_votes
+    )
+@app.route('/results', methods=['GET'])
+def results_by_election():
+    conn = get_db_connection()
+    elections = conn.execute('SELECT id, name, type FROM elections ORDER BY name').fetchall()
+
+    selected_election_id = request.args.get('election_id')
+    selected_election = None
+    candidates_results = []
+
+    if selected_election_id:
+        # Fetch details of the selected election
+        selected_election = conn.execute('SELECT id, name, type FROM elections WHERE id = ?', (selected_election_id,)).fetchone()
+
+        if selected_election:
+            # DAA - Data Access and Transformation for Election Results
+            # Fetch candidates and their vote counts for the selected election
+            candidates_results = conn.execute('''
+                SELECT
+                    c.name,
+                    c.party,
+                    c.vote_count
+                FROM candidates c
+                WHERE c.election_id = ?
+                ORDER BY c.vote_count DESC, c.name
+            ''', (selected_election_id,)).fetchall()
+        else:
+            flash('Invalid election selected!', 'error')
+            selected_election_id = None # Clear selection if invalid
+
+    conn.close()
+
+    return render_template(
+        'results_by_election.html',
+        elections=elections,
+        selected_election=selected_election,
+        candidates_results=candidates_results
+    )
 # --- 8. Main Application Entry Point ---
 # This block ensures that the 'init_db()' function and 'app.run()' are
 # called only when you execute this script directly (e.g., 'python app.py').
