@@ -34,6 +34,11 @@
         <a href="{{ url_for('list_elections') }}">View Elections</a>
         <a href="{{ url_for('register_voter') }}">Register Voter</a> {# NEW LINK #}
         <a href="{{ url_for('list_voters') }}">View Voters</a> {# NEW LINK #}
+        <a href="{{ url_for('add_candidate') }}">Add Candidate</a> {# NEW LINK #}
+        <a href="{{ url_for('list_candidates') }}">View Candidates</a> {# NEW LINK #}
+        <a href="{{ url_for('cast_vote') }}">Cast Vote</a> {# NEW LINK #}
+        <a href="{{ url_for('dashboard') }}">Dashboard</a> {# NEW LINK #}
+        <a href="{{ url_for('results_by_election') }}">View Results</a> {# NEW LINK #}
         </nav>
     <div class="container">
         {% block content %}{% endblock %}
