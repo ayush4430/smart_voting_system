@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registered Voters</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column; /* Changed to column for vertical alignment */
+            justify-content: flex-start; /* Align content to the top */
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f4f4f4;
+            padding-top: 30px; /* Add some space from the top */
+        }
+        .container {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            width: 80%; /* Make container wider for table */
+            max-width: 600px; /* Max width for readability */
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse; /* Removes spacing between table cells */
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .back-link {
+            display: block;
+            margin-top: 20px;
+            color: #007bff;
+            text-decoration: none;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Registered Voters</h1>
+        {% if voters %} {# NEW: Jinja2 if statement #}
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Voter ID</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for voter in voters %} {# NEW: Jinja2 for loop #}
+                    <tr>
+                        <td>{{ voter.id }}</td> {# NEW: Jinja2 variable output #}
+                        <td>{{ voter.voter_id }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p>No voters registered yet.</p>
+        {% endif %}
+        <a href="/" class="back-link">Back to Home</a>
+    </div>
+</body>
+</html>
